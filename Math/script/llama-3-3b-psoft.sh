@@ -10,7 +10,7 @@ export mag_a="True"
 export use_neumann="True"
 export neumann_n=5
 
-current_output_dir="${output_dir}/A100_N-psoft_r${rank}_neumann_n${neumann_n}"
+current_output_dir="${output_dir}/H100_PSOFT_r${rank}_neumann_n${neumann_n}"
 
 python ../fine-tuning_math.py \
   --model_name_or_path $model_name_or_path \
