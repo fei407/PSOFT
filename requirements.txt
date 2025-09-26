@@ -1,0 +1,16 @@
+numpy==1.26.4
+evaluate==0.4.3
+transformers==4.45.1
+scikit-learn==1.5.2
+accelerate==0.34.2
+rouge_score==0.1.2
+wandb==0.18.3
+jsonlines==4.0.0
+fire==0.7.0
+fraction==2.2.0
+vllm==0.4.0.post1 
+bitsandbytes==0.44.1
+deepspeed==0.15.1
+torch-scatter
+torch-sparse
+-f https://data.pyg.org/whl/torch-2.1.2+cu121.html
