@@ -10,10 +10,10 @@ The code framework is adapted from [SVFT](https://github.com/VijayLingam95/SVFT)
 ## Repository Overview
 The repository is organized as follows:
 
-* [NLU](NLU/):  Source code for fine-tuning and evaluation on the _GLUE_ benchmarks.
-* [Vision](Vision/): Source code for fine-tuning and evaluation on the _VTAB-1K_ benchmarks.
-* [Math](Math/):  Source code for fine-tuning on _MetaMathQA-40K_ and evaluation on the _GSM-8K_ and _MATH_ datasets.
-* [Commonsense](Commonsense/): Source code for fine-tuning on _Commonsense-15K_ and evaluation on the _Commonsense Reasoning_ benchmarks.
+* [1-NLU](1-NLU/):  Source code for fine-tuning and evaluation on the _GLUE_ benchmarks.
+* [2-Vision](2-Vision/): Source code for fine-tuning and evaluation on the _VTAB-1K_ benchmarks.
+* [3-Math](3-Math/):  Source code for fine-tuning on _MetaMathQA-40K_ and evaluation on the _GSM-8K_ and _MATH_ datasets.
+* [4-Commonsense](4-Commonsense/): Source code for fine-tuning on _Commonsense-15K_ and evaluation on the _Commonsense Reasoning_ benchmarks.
 
 ## QuickStart of PSOFT
 
@@ -75,7 +75,7 @@ pip install vllm==0.10.0
 pip install fraction==2.2.0
 pip install jsonlines==4.0.0
 ```
-Before running the script please change the path name in [eval_all.sh](Math/) to match the path of results:
+Before running the script please change the path name in [eval_all.sh](3-Math/) to match the path of results:
 ```bash
 cd ../
 ./eval_all.sh
@@ -100,7 +100,7 @@ mkdir -p ../PSOFT/Commonsense/dataset
 cp -r dataset/* ../PSOFT/Commonsense/dataset
 ```
 
-Edit the path in [eval_all.sh](Commonsense/) to match the results directory:
+Edit the path in [eval_all.sh](4-Commonsense/) to match the results directory:
 
 ```bash
 cd /PSOFT/Commonsense/
