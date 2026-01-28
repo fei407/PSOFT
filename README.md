@@ -117,11 +117,12 @@ cd /PSOFT/Commonsense/
 ## Citation
 Please cite our paper if PSOFT provides insights or inspiration for your work:
 ```
-@article{wu2025psoft,
-  title={Efficient Orthogonal Fine-Tuning with Principal Subspace Adaptation},
-  author={Wu, Fei and Hu, Jia and Min, Geyong and Wang, Shiqiang},
-  journal={arXiv preprint arXiv:2505.11235},
-  year={2025}
+@inproceedings{wu2026efficient,
+title={Efficient Orthogonal Fine-Tuning with Principal Subspace Adaptation},
+author={Wu, Fei and Hu, Jia and Min, Geyong and Wang, Shiqiang},
+booktitle={The Fourteenth International Conference on Learning Representations},
+year={2026},
+url={https://openreview.net/forum?id=FSHrinMArK}
 }
 ```
 
