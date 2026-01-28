@@ -1,6 +1,9 @@
-# Efficient Orthogonal Fine-Tuning with Principal Subspace Adaptation (PSOFT)
+# Efficient Orthogonal Fine-Tuning with Principal Subspace Adaptation (PSOFT) 
 
-This is the official repository for the paper **Efficient Orthogonal Fine-Tuning with Principal Subspace Adaptation**.
+🎉 Paper accepted to ICLR 2026!
+We are pleased to announce that our work has been accepted by The Fourteenth International Conference on Learning Representations (ICLR 2026).
+
+This repository serves as the official implementation of the PSOFT method proposed in the paper: **Efficient Orthogonal Fine-Tuning with Principal Subspace Adaptation**.
 
 The code framework is adapted from [SVFT](https://github.com/VijayLingam95/SVFT) and incorporates implementations from [LoRA](https://github.com/microsoft/LoRA) and [LoRA-XS](https://github.com/MohammadrezaBanaei/LoRA-XS).
 
