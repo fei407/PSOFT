@@ -38,7 +38,7 @@ python ../fine-tuning_glue.py \
   --eval_strategy epoch \
   --save_strategy epoch \
   --load_best_model_at_end True \
-  --metric_for_best_model eval_pearson \
+  --metric_for_best_model eval_matthews_correlation \
   --greater_is_better True \
   --save_total_limit 1 \
   --peft_name $peft_name \
