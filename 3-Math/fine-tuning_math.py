@@ -529,7 +529,6 @@ def train():
             lora_dropout=peft_dropout,
             target_modules=peft_inserted_modules,
             task_type=task_type,
-            modules_to_save=["classifier", "pooler"],
             init_lora_weights='pissa_orth',
             # init_lora_weights = 'pissa_niter_20',  # Using Fast-SVD，'pissa_niter_[number of iters]'` initiates Fast-SVD-based PiSSA initialization
         )
