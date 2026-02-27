@@ -1,6 +1,6 @@
 # (ICLR 2026) Efficient Orthogonal Fine-Tuning with Principal Subspace Adaptation (PSOFT) 
 
-🎉 **[PSOFT](https://github.com/huggingface/peft/tree/main/src/peft/tuners/psoft)** is now fully supported by the [HuggingFace PEFT package](https://github.com/huggingface/peft) !!
+🎉 **[PSOFT](https://github.com/huggingface/peft/tree/main/src/peft/tuners/psoft)** is now fully supported by the 🤗 [HuggingFace PEFT package](https://github.com/huggingface/peft) !!
 
 🎉 **[PSOFT](https://openreview.net/forum?id=FSHrinMArK)** is accepted to [ICLR 2026](https://iclr.cc/) !! See you in **Rio de Janeiro** !! 
 
@@ -50,7 +50,7 @@ trainer.train()
 peft_model.save_pretrained("psoft-opt-125m")
 ```
 
-More details please refer to [package_reference](https://github.com/huggingface/peft/blob/main/docs/source/package_reference/psoft.md),  [examples](https://github.com/huggingface/peft/tree/main/examples/psoft_finetuning) and [method_comparison](https://github.com/huggingface/peft/tree/main/method_comparison/MetaMathQA) in [HuggingFace PEFT package](https://github.com/huggingface/peft).
+More details please refer to [package_reference](https://github.com/huggingface/peft/blob/main/docs/source/package_reference/psoft.md),  [examples](https://github.com/huggingface/peft/tree/main/examples/psoft_finetuning) and [method_comparison](https://github.com/huggingface/peft/tree/main/method_comparison/MetaMathQA) in 🤗 [HuggingFace PEFT package](https://github.com/huggingface/peft).
 
 
 ## Best Practices
