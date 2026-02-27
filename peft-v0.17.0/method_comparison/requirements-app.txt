@@ -1,3 +1,0 @@
-dash
-gradio>=5.38.0
-pandas

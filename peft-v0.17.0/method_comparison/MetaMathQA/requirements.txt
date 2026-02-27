@@ -1,4 +1,0 @@
-bitsandbytes
-datasets
-numpy
-tqdm

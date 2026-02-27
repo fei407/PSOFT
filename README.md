@@ -1,41 +1,85 @@
 # Efficient Orthogonal Fine-Tuning with Principal Subspace Adaptation (PSOFT) 
 
-🎉 Paper accepted to **ICLR 2026**!
+🎉 PSOFT is now fully supported by the [HuggingFace PEFT package](https://github.com/huggingface/peft).
 
-We are pleased to announce that our work has been accepted by The **Fourteenth International Conference on Learning Representations (ICLR 2026)**.
+🎉 PSOFT is accepted to [ICLR 2026](https://iclr.cc/)!! See you in Rio de Janeiro!!
 
-This repository serves as the official implementation of the PSOFT method proposed in the paper: **Efficient Orthogonal Fine-Tuning with Principal Subspace Adaptation**.
-
-The code framework is adapted from [SVFT](https://github.com/VijayLingam95/SVFT) and incorporates implementations from [LoRA](https://github.com/microsoft/LoRA) and [LoRA-XS](https://github.com/MohammadrezaBanaei/LoRA-XS).
-
-**Overview of PSOFT**
+## Overview of PSOFT ##
 ![Overview of PSOFT](0-Fig/psoft.svg "Overview of PSOFT")
 
-## Repository Overview
-The repository is organized as follows:
+PSOFT preserves the geometric structure of pre-trained weight columns—a key principle of Orthogonal Fine-Tuning (OFT)—while achieving a balanced trade-off between parameter, computation, and memory efficiency.
 
-* [1-NLU](1-NLU/):  Source code for fine-tuning and evaluation on the _GLUE_ benchmarks.
-* [2-Vision](2-Vision/): Source code for fine-tuning and evaluation on the _VTAB-1K_ benchmarks.
-* [3-Math](3-Math/):  Source code for fine-tuning on _MetaMathQA-40K_ and evaluation on the _GSM-8K_ and _MATH_ datasets.
-* [4-Commonsense](4-Commonsense/): Source code for fine-tuning on _Commonsense-15K_ and evaluation on the _Commonsense Reasoning_ benchmarks.
+Unlike sparsity-based OFT variants (e.g., [OFTv1](https://huggingface.co/papers/2306.07280)/[OFTv2](https://huggingface.co/papers/2506.19847), [BOFT](https://huggingface.co/papers/2311.06243), [GOFT](https://github.com/ArthurLeoM/peft-givens)), PSOFT adopts a low-rank principal subspace formulation that bridges LoRA and OFT. By restricting orthogonal transformations to a principal subspace, PSOFT provides theoretical guarantees through orthogonality constraints, while maintaining practical flexibility via two lightweight scaling vectors.
 
-## QuickStart of PSOFT
+Extensive experiments across 35 NLP and CV tasks on four representative models demonstrate that PSOFT delivers strong semantic preservation, expressiveness, and multi-dimensional efficiency in PEFT.
+
+## Quickstart and Examples
+```python
+import torch
+from peft import PsoftConfig, get_peft_model
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from trl import SFTConfig, SFTTrainer
+from datasets import load_dataset
+
+model_name = "facebook/opt-125m"
+
+model = AutoModelForCausalLM.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer.pad_token_id = tokenizer.eos_token_id
+
+psoft_config = PsoftConfig(
+    r=32,
+    psoft_alpha=32,
+)
+
+peft_model = get_peft_model(model, psoft_config)
+peft_model.print_trainable_parameters()
+
+dataset = load_dataset("imdb", split="train[:1%]")
+
+training_args = SFTConfig(dataset_text_field="text", max_length=128)
+
+trainer = SFTTrainer(
+    model=peft_model,
+    args=training_args,
+    train_dataset=dataset,
+    processing_class=tokenizer,
+)
+
+trainer.train()
+peft_model.save_pretrained("psoft-opt-125m")
+```
+
+More details please refer to [package_reference](https://github.com/huggingface/peft/blob/main/docs/source/package_reference/psoft.md),  [examples](https://github.com/huggingface/peft/tree/main/examples/psoft_finetuning) and [method_comparison](https://github.com/huggingface/peft/tree/main/method_comparison/MetaMathQA) in [HuggingFace PEFT package](https://github.com/huggingface/peft).
+
+
+## Best Practices
+
+> [!TIP]
+> - **Rank Choice**: Smaller ranks (e.g., `32–128`) work well for simpler tasks, while larger ranks (e.g., `64–256`) increase expressiveness at the cost of additional parameters and computation.
+> - **Scaling Factor**: In our experiments, the scaling factor is typically set to `r`.
+> - **Learning Rate**: Standard learning rates (e.g., `1e-4` to `5e-3`) generally provide stable training.
+> - **SVD Initialization**: The `lowrank` option is more memory- and compute-efficient than `full`, making it preferable for large models.
+> - **Cayley–Neumann Approximation**: For large ranks, enabling the Cayley–Neumann approximation improves efficiency. A small number of Neumann terms (typically `5`) usually offers a good balance between accuracy and speed.
+
+
+## Experiments of PSOFT
+The experiments are organized as follows:
+
+* [1-NLU](1-NLU/):  Fine-tuning and evaluation on the _GLUE_ benchmarks.
+* [2-Vision](2-Vision/): Fine-tuning and evaluation on the _VTAB-1K_ benchmarks.
+* [3-Math](3-Math/):  Fine-tuning on _MetaMathQA-40K_ and evaluation on the _GSM-8K_ and _MATH_ datasets.
+* [4-Commonsense](4-Commonsense/): Fine-tuning on _Commonsense-15K_ and evaluation on the _Commonsense Reasoning_ benchmarks.
 
 ### Step 0. Preparations
-Replace [yourworkspace] with your workspace path.
+Replace `prefix: /home/[yourworkspace]/anaconda3/envs/psoft` entry in the last line of psoft.yml with the path to your local workspace.
 ```bash
-conda create -n psoft python=3.10
+conda env create -f psoft.yml
 conda activate psoft 
 
-pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cu121
-pip install -r requirements.txt
-
-cd peft-v0.17.0/
-pip install -e .
-
-export PYTHONPATH="/[yourworkspace]/PSOFT:$PYTHONPATH"
 find . -name "*.sh" -exec chmod +x {} \;
 ```
+
 Some models or datasets require permission for usage. Please log in to your Hugging Face account using an access token.
 
 Generate your Access Token from [settings/tokens](https://huggingface.co/settings/tokens) and log in. 
@@ -70,15 +114,6 @@ cd Math/script/
 ./llama-3-3b-psoft.sh
 ```
 
-To **evaluate** the fine-tuned model in a new environment:
-```bash
-conda create -n vllm python==3.10
-conda activate vllm
-
-pip install vllm==0.10.0
-pip install fraction==2.2.0
-pip install jsonlines==4.0.0
-```
 Before running the script please change the path name in [eval_all.sh](3-Math/) to match the path of results:
 ```bash
 cd ../
@@ -111,12 +146,7 @@ cd /PSOFT/Commonsense/
 ./eval_all.sh
 ```
 
-### Key Parameter Descriptions
-+ `psoft_orth`: Enables Cayley parameterization for the orthogonal matrix R.
-+ `psoft_mag_b`: Enables tuning of the scaling vector Beta applied after R.
-+ `psoft_mag_a`: Enables tuning of the scaling vector Alpha applied before R.
-+ `psoft_use_cayley_neumann`: Enables Cayley Neumann.
-+ `psoft_num_cayley_neumann_terms`: Enables the terms of Cayley Neumann.
+
 
 ## Citation
 Please cite our paper if PSOFT provides insights or inspiration for your work:
@@ -129,6 +159,3 @@ year={2026},
 url={https://openreview.net/forum?id=FSHrinMArK}
 }
 ```
-
-
-

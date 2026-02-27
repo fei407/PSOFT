@@ -15,11 +15,6 @@ from tqdm import tqdm
 import sys
 from functools import partial, reduce
 
-sys.path.append("../")
-from baselines.lora_xs.initialization_utils import find_and_initialize
-from baselines.svft.svft_layers import LinearWithSVFT, create_and_replace_modules, get_target_modules_list, replace_svft_with_fused_linear
-from baselines.psoft.psoft_layers import create_and_insert
-
 """
 Unused imports:
 import torch.nn as nn
@@ -28,7 +23,7 @@ import bitsandbytes as bnb
 sys.path.append(os.path.join(os.getcwd(), "peft/src/"))
 
 from peft import (  # noqa: E402
-    LoraConfig, OFTConfig, BOFTConfig, VeraConfig,
+    LoraConfig, OFTConfig, BOFTConfig, VeraConfig, PsoftConfig,
     PromptLearningConfig,
     PrefixTuningConfig,
     get_peft_model,
@@ -79,7 +74,6 @@ def train(
         svft_pattern: str = "banded",
         svft_fill_orthonormal: bool = False,
         psoft_orth: bool = True,
-        psoft_mag_out: bool = False,
         psoft_mag_b: bool = True,
         psoft_mag_a: bool = True,
         psoft_use_cayley_neumann: bool = True,
@@ -132,7 +126,6 @@ def train(
         f"svft_pattern: {svft_pattern}\n"
         f"svft_fill_orthonormal: {svft_fill_orthonormal}\n"
         f"psoft_orth: {psoft_orth}\n"
-        f"psoft_mag_out: {psoft_mag_out}\n"
         f"psoft_mag_b: {psoft_mag_b}\n"
         f"psoft_mag_a: {psoft_mag_a}\n"
         f"psoft_use_cayley_neumann: {psoft_use_cayley_neumann}\n"
@@ -312,61 +305,25 @@ def train(
             target_modules=peft_inserted_modules,
             task_type="CAUSAL_LM",
         )
-    elif peft_name == 'svft':
-        # for SVFT turn off gradient requirement for all layers
-        # PEFT library handles this internally
-        for param in model.parameters():
-            param.requires_grad = False
-
-        print(f"Target Modules: {peft_inserted_modules}")
-        assign_svft_layer = partial(LinearWithSVFT,
-                                    off_diag=svft_off_diag,
-                                    pattern=svft_pattern,
-                                    fill_orthonormal=svft_fill_orthonormal)
-
-        create_and_replace_modules(model, get_target_modules_list(model, peft_inserted_modules), assign_svft_layer)
-    elif peft_name == 'lora_xs':
-        config = LoraConfig(
-            r=peft_rank,
-            lora_alpha=peft_rank,
-            lora_dropout=peft_dropout,
-            target_modules=peft_inserted_modules,
-            task_type="CAUSAL_LM",
-        )
-        adapter_name = "default"
-        peft_config_dict = {}
-        if not isinstance(config, PromptLearningConfig):
-            peft_config_dict[adapter_name] = config
-
-        with open("../../baselines/lora_xs/config/reconstruct_config.yaml", "r") as stream:
-            reconstr_config = yaml.load(stream, Loader=yaml.FullLoader)
-        reconstr_type = reconstr_config["reconstruction_type"]
-        reconstr_config[reconstr_type]["rank"] = peft_config_dict[adapter_name].r
-
-        model = get_peft_model(model, config)
-
-        find_and_initialize(
-            model,
-            peft_config_dict,
-            adapter_name=adapter_name,
-            reconstr_type=reconstr_type,
-            reconstruct_config=reconstr_config,
-        )
     elif peft_name == 'psoft':
-        config = LoraConfig(
+        peft_config = PsoftConfig(
             r=peft_rank,
-            lora_alpha=peft_rank,
-            lora_dropout=peft_dropout,
+            psoft_alpha=peft_rank,
+            psoft_dropout=peft_dropout,
             target_modules=peft_inserted_modules,
             task_type="CAUSAL_LM",
-            init_lora_weights='pissa_orth',
-            # init_lora_weights = 'pissa_niter_20',  # Using Fast-SVD，'pissa_niter_[number of iters]'` initiates Fast-SVD-based PiSSA initialization
+            ab_svd_init="psoft_init",
+            psoft_svd="lowrank",
+            psoft_orth=psoft_orth,
+            psoft_mag_a=psoft_mag_a,
+            psoft_mag_b=psoft_mag_b,
+            use_cayley_neumann=psoft_use_cayley_neumann,
+            num_cayley_neumann_terms=psoft_num_cayley_neumann_terms,
+            cayley_neumann_eps=None,
         )
-        print("PiSSA is Baking... (PiSSA initializing will take a while.)")
-        model = get_peft_model(model, config)
-        create_and_insert(model, config, psoft_orth, psoft_mag_out, psoft_mag_b, psoft_mag_a, psoft_use_cayley_neumann, psoft_num_cayley_neumann_terms)
+        model = get_peft_model(model, peft_config)
 
-        check_lora_A_row_orthogonality(model)
+        # check_lora_A_row_orthogonality(model)
     elif peft_name == "full":
         pass
     else:
@@ -423,7 +380,7 @@ def train(
             bf16=True,
             logging_steps=10,
             optim="adamw_torch",
-            evaluation_strategy="steps" if val_set_size > 0 else "no",
+            eval_strategy="steps" if val_set_size > 0 else "no",
             save_strategy="steps",
             eval_steps=eval_step if val_set_size > 0 else None,
             save_steps=save_step,
@@ -563,7 +520,6 @@ def parse_args():
     parser.add_argument('--svft_pattern', type=str, default='banded', help='SVFT banded')
     parser.add_argument('--svft_fill_orthonormal', type=bool, default=False, help='SVFT fill_orthonormal')
     parser.add_argument('--psoft_orth', type=bool, default=True, help='PSOFT orth')
-    parser.add_argument('--psoft_mag_out', type=bool, default=False, help='PSOFT mag_out')
     parser.add_argument('--psoft_mag_b', type=bool, default=True, help='PSOFT mag_b')
     parser.add_argument('--psoft_mag_a', type=bool, default=True, help='PSOFT mag_a')
     parser.add_argument('--psoft_use_cayley_neumann', type=bool, default=True, help='PSOFT psoft_use_cayley_neumann')

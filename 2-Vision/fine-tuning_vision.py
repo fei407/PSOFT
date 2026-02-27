@@ -28,18 +28,9 @@ from transformers import (
     get_linear_schedule_with_warmup,
     set_seed,
 )
-from peft import BOFTConfig, LoraConfig, OFTConfig, PromptLearningConfig, VeraConfig, get_peft_model
+from peft import BOFTConfig, LoraConfig, OFTConfig, PromptLearningConfig, VeraConfig, get_peft_model, PsoftConfig
 from wandb import require
 import wandb
-
-from baselines.lora_xs.initialization_utils import find_and_initialize
-from baselines.svft.svft_layers import (
-    LinearWithSVFT,
-    create_and_replace_modules,
-    get_target_modules_list,
-    replace_svft_with_fused_linear,
-)
-from baselines.psoft.psoft_layers import create_and_insert
 
 @dataclass
 class ScriptArguments:
@@ -127,10 +118,6 @@ class PEFTArguments:
         default=True,
         metadata={"help": "Set this to use Cayley Parameterization on R"}
     )
-    psoft_mag_out: Optional[bool] = field(
-        default=False,
-        metadata={"help": "Set this to tune magnitude vector for output of W"}
-    )
     psoft_mag_b: Optional[bool] = field(
         default=True,
         metadata={"help": "Set this to tune scaling vector Beta for output of R"}
@@ -168,20 +155,31 @@ class PEFTArguments:
         metadata={"help": "Number of Cayley-Neumann terms to use. Higher number results in less approximation error for orthogonality."}
     )
 
-def check_lora_A_row_orthogonality(model, tol=1e-3):
+def check_lora_A_row_orthogonality(model, tol=1e-1):
     for name, module in model.named_modules():
-        if hasattr(module, "lora_A"):
-            for adapter_name, A_layer in module.lora_A.items():
-                A = A_layer.weight.data
-                AA_t = A @ A.T
-                identity = torch.eye(A.shape[0], device=A.device)
-                deviation = torch.norm(AA_t - identity)
+        # Only check PSOFT layers that have the cache getter and psoft_R
+        if not (hasattr(module, "_get_psoft_ab_cache_buffers") and hasattr(module, "psoft_R")):
+            continue
 
-                print(f"[{name}] Adapter: {adapter_name} | ‖A·Aᵀ - I‖ = {deviation:.4e}")
-                if deviation < tol:
-                    print(" --> A is approximately orthogonal")
-                else:
-                    print(" --> A is NOT orthogonal")
+        for adapter_name in module.psoft_R.keys():
+            # Read cached A, B
+            try:
+                A, _ = module._get_psoft_ab_cache_buffers(adapter_name)
+            except Exception as e:
+                if verbose:
+                    print(f"[{name}] Adapter: {adapter_name} | cannot get cache buffers: {e}")
+                continue
+
+            # Compute deviation || A A^T - I ||
+            AA_t = A @ A.T
+            identity = torch.eye(A.shape[0], device=A.device, dtype=AA_t.dtype)
+            deviation = torch.linalg.norm(AA_t - identity)
+
+            print(f"[{name}] Adapter: {adapter_name} | ‖A·Aᵀ - I‖ = {deviation:.4e}")
+            if deviation < tol:
+                print(" --> A is approximately row-orthonormal")
+            else:
+                print(" --> A is NOT row-orthonormal")
 
 ##########################
 # Metrics
@@ -383,7 +381,6 @@ def main():
     svft_pattern = peft_args.svft_pattern
     svft_fill_orthonormal = peft_args.svft_fill_orthonormal
     psoft_orth = peft_args.psoft_orth
-    psoft_mag_out = peft_args.psoft_mag_out
     psoft_mag_b = peft_args.psoft_mag_b
     psoft_mag_a = peft_args.psoft_mag_a
     goft_strict_oft = peft_args.goft_strict_oft
@@ -447,63 +444,25 @@ def main():
             target_modules=peft_inserted_modules,
             modules_to_save=["classifier"],
         )
-    elif peft_name == "svft":
-        # for SVFT turn off gradient requirement for all layers
-        # PEFT library handles this internally
-        for name, param in model.named_parameters():
-            param.requires_grad = False
-
-        assign_svft_layer = partial(LinearWithSVFT,
-                                    off_diag=svft_off_diag,
-                                    pattern=svft_pattern,
-                                    fill_orthonormal=svft_fill_orthonormal)
-        create_and_replace_modules(model, get_target_modules_list(model, peft_inserted_modules), assign_svft_layer)
-
-        for name, param in model.named_parameters():
-            if 'classifier' in name:
-                param.requires_grad = True
-    elif peft_name == 'lora_xs':
-        config = LoraConfig(
+    elif peft_name == 'psoft':
+        peft_config = PsoftConfig(
             r=peft_rank,
-            lora_alpha=peft_rank,
-            lora_dropout=peft_dropout,
+            psoft_alpha=peft_rank,
+            psoft_dropout=peft_dropout,
             target_modules=peft_inserted_modules,
+            ab_svd_init="psoft_init",
+            psoft_svd="full",
+            psoft_orth=psoft_orth,
+            psoft_mag_a=psoft_mag_a,
+            psoft_mag_b=psoft_mag_b,
+            use_cayley_neumann=psoft_use_cayley_neumann,
+            num_cayley_neumann_terms=psoft_num_cayley_neumann_terms,
+            cayley_neumann_eps=None,
             modules_to_save=["classifier"],
         )
-        adapter_name = "default"
-        peft_config_dict = {}
-        if not isinstance(config, PromptLearningConfig):
-            peft_config_dict[adapter_name] = config
+        model = get_peft_model(model, peft_config)
 
-        with open("../../baselines/lora_xs/config/reconstruct_config.yaml", "r") as stream:
-            reconstr_config = yaml.load(stream, Loader=yaml.FullLoader)
-        reconstr_type = reconstr_config["reconstruction_type"]
-        reconstr_config[reconstr_type]["rank"] = peft_config_dict[adapter_name].r
-
-        model = get_peft_model(model, config)
-
-        find_and_initialize(
-            model,
-            peft_config_dict,
-            adapter_name=adapter_name,
-            reconstr_type=reconstr_type,
-            reconstruct_config=reconstr_config,
-        )
-    elif peft_name == 'psoft':
-        config = LoraConfig(
-            r=peft_rank,
-            lora_alpha=peft_rank,
-            lora_dropout=peft_dropout,
-            target_modules=peft_inserted_modules,
-            modules_to_save=["classifier", "pooler"],
-            init_lora_weights='pissa_orth',
-            # init_lora_weights = 'pissa_niter_20',  # Using Fast-SVD，'pissa_niter_[number of iters]'` initiates Fast-SVD-based PiSSA initialization
-        )
-        print("PiSSA is Baking... (PiSSA initializing will take a while.)")
-        model = get_peft_model(model, config)
-        create_and_insert(model, config, psoft_orth, psoft_mag_out, psoft_mag_b, psoft_mag_a, psoft_use_cayley_neumann, psoft_num_cayley_neumann_terms)
-
-        check_lora_A_row_orthogonality(model)
+        # check_lora_A_row_orthogonality(model)
     elif peft_name == "head":
         classifier_modules = "classifier"
         for n, p in model.named_parameters():

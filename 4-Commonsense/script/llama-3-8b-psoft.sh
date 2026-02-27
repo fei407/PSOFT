@@ -10,7 +10,7 @@ export mag_a="True"
 export use_neumann="True"
 export neumann_n=5
 
-current_output_dir="${output_dir}/H100_PSOFT_r${rank}_neumann_n${neumann_n}"
+current_output_dir="${output_dir}/H100_PSOFT_r${rank}"
 
 python ../fine-tuning_comm.py \
   --base_model $model_name_or_path \
@@ -25,7 +25,7 @@ python ../fine-tuning_comm.py \
   --cutoff_len 512 \
   --val_set_size 120 \
   --peft_name $peft_name \
-  --peft_inserted_modules "q_proj","k_proj","v_proj","up_proj","down_proj" \
+  --peft_inserted_modules "q_proj","v_proj" \
   --peft_dropout 0.0 \
   --peft_rank $rank \
   --psoft_orth $orth \
