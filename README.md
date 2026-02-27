@@ -1,6 +1,6 @@
 # (ICLR 2026) Efficient Orthogonal Fine-Tuning with Principal Subspace Adaptation (PSOFT) 
 
-🎉 **[PSOFT](https://github.com/huggingface/peft/tree/main/src/peft/tuners/psoft)** is now fully supported by the 🤗 [HuggingFace PEFT library](https://github.com/huggingface/peft) !!
+🎉 **[PSOFT](https://github.com/huggingface/peft/tree/main/src/peft/tuners/psoft)** is now officially integrated into the 🤗 [HuggingFace PEFT library](https://github.com/huggingface/peft) !!
 
 🎉 **[PSOFT](https://openreview.net/forum?id=FSHrinMArK)** is accepted to [ICLR 2026](https://iclr.cc/) !! See you in **Rio de Janeiro** !! 
 
