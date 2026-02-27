@@ -1,8 +1,8 @@
 # Efficient Orthogonal Fine-Tuning with Principal Subspace Adaptation (PSOFT) 
 
-🎉 PSOFT is now fully supported by the [HuggingFace PEFT package](https://github.com/huggingface/peft).
+🎉 **PSOFT** is now fully supported by the [HuggingFace PEFT package](https://github.com/huggingface/peft).
 
-🎉 PSOFT is accepted to [ICLR 2026](https://iclr.cc/)!! See you in Rio de Janeiro!!
+🎉 **PSOFT** is accepted to [ICLR 2026](https://iclr.cc/)!! See you in Rio de Janeiro!!
 
 ## Overview of PSOFT ##
 ![Overview of PSOFT](0-Fig/psoft.svg "Overview of PSOFT")
