@@ -1,3 +1,5 @@
+
+
 # (ICLR 2026) Efficient Orthogonal Fine-Tuning with Principal Subspace Adaptation (PSOFT) 
 
 🎉 **[PSOFT](https://github.com/huggingface/peft/tree/main/src/peft/tuners/psoft)** is now officially integrated into the 🤗 [HuggingFace PEFT library](https://github.com/huggingface/peft) !!
@@ -93,7 +95,7 @@ Access Tokens:[Copy and paste your Access Tokens]
 **Fine-tune** and **evaluate** using the [DeBERTaV3-base](https://huggingface.co/microsoft/deberta-v3-base) model:
 
 ```bash
-cd NLU/script/
+cd 1-NLU/script/
 ./deberta_v3_base_psoft-cola.sh
 ```
 
